@@ -1,7 +1,7 @@
+import 'dart:async';
+
 import 'package:calculator_ood/Presentation/Controller/controller.dart';
 import 'package:calculator_ood/Presentation/Model/view_model.dart';
-import 'package:calculator_ood/Presentation/Presenter/view_interface.dart';
-
 import '../../constants.dart';
 import 'keyboard.dart';
 import 'package:flutter/material.dart';
@@ -13,35 +13,39 @@ class Calculator extends StatefulWidget {
   CalculatorState createState() => CalculatorState();
 }
 
-class CalculatorState extends State<Calculator> implements ViewInterface{
+class CalculatorState extends State<Calculator> {
   late Size size;
   List allBtn = [];
-  String showResult = '';
-  String result = '';
+  String showExpression = '';
+  String finalResult = '';
   int openQuot = 0;
   bool hasResult = false;
   String prevResult = '';
   int historyCounter = 0;
-
+  static StreamController<ViewModel> streamController = StreamController<ViewModel>();
+  late Stream<ViewModel> stream;
   @override
-  showExpressionResult(ViewModel viewModel) {
-    result +=  viewModel.expression;
-    setState(() {});
+  void initState() {
+    stream = streamController.stream;
+    stream.listen((ViewModel event) {
+      finalResult = event.expression;
+    });
+    super.initState();
   }
 
   void onPressed({required String buttonText}) {
     if(hasResult){
       //      در صورتی که بعد از زدن مساوی دکمه های اوپراتور زده شود نتیجه خروجی به عنوان اولین عدد قرار میگیرد
       if( getBtnType(buttonText) == 'is_operator'){
-        showResult = result;
-        allBtn = result.split('');
-        result = '';
+        showExpression = finalResult;
+        allBtn = finalResult.split('');
+        finalResult = '';
         hasResult=false;
       }
       else{
-        showResult = '';
+        showExpression = '';
         allBtn = [];
-        result = '';
+        finalResult = '';
         hasResult=false;
       }
     }
@@ -49,18 +53,18 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
     if (getBtnType(buttonText) == 'is_number') {
       //====================================================  دکمه های اعداد
       if (lastBtn == ')') {
-        showResult += '×$buttonText';
+        showExpression += '×$buttonText';
         saveBtn('×');
         saveBtn(buttonText);
       } else if (!(getLastNumber() == ZERO && buttonText == ZERO)) {
         if (getLastNumber() == ZERO && buttonText != ZERO) {
           removeLastBtn();
-          showResult = showResult.substring(
+          showExpression = showExpression.substring(
               0,
-              showResult.length -
+              showExpression.length -
                   1); //remove last zero character from show result
         }
-        showResult += buttonText;
+        showExpression += buttonText;
         saveBtn(buttonText);
       }
     }
@@ -70,17 +74,17 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
         removePointWithMultiplication();
       }
       if (lastBtn == ')') {
-        showResult += '×$buttonText(';
+        showExpression += '×$buttonText(';
         saveBtn('×');
         saveBtn(buttonText);
         saveBtn('(');
       } else if (getBtnType(lastBtn) == 'is_number') {
-        showResult += '×$buttonText(';
+        showExpression += '×$buttonText(';
         saveBtn('×');
         saveBtn(buttonText);
         saveBtn('(');
       } else {
-        showResult += '$buttonText(';
+        showExpression += '$buttonText(';
         saveBtn(buttonText);
         saveBtn('(');
       }
@@ -89,7 +93,7 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
     else if (getBtnType(buttonText) == 'is_operator') {
       //====================================================  دکمه های اپراتور + - * / %
       if (getLastNumber().contains('_')) {
-        showResult += ")";
+        showExpression += ")";
         openQuot--;
         saveBtn(")");
       }
@@ -98,12 +102,12 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
       }
       if (getBtnType(lastBtn) == 'is_operator') {
         removeLastBtn();
-        showResult = showResult.substring(0, showResult.length - 1);
-        showResult += buttonText;
+        showExpression = showExpression.substring(0, showExpression.length - 1);
+        showExpression += buttonText;
         saveBtn(buttonText);
       }
       else if (lastBtn != "(" && lastBtn != '') {
-        showResult += buttonText;
+        showExpression += buttonText;
         saveBtn(buttonText);
       }
     }
@@ -120,7 +124,7 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
           openQuot++;
         }
         int lastBtnLength = lastBtn.length;
-        showResult = showResult.substring(0, showResult.length - lastBtnLength);
+        showExpression = showExpression.substring(0, showExpression.length - lastBtnLength);
         removeLastBtn();
       }
       else if (buttonText == QUOTE_SIGN) {
@@ -128,43 +132,43 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
 
         if (getLastNumber().contains('_')) {
           if (getLastNumber() == '_') {
-            showResult += "1";
-            showResult += ")";
+            showExpression += "1";
+            showExpression += ")";
             openQuot--;
             saveBtn("1");
             saveBtn(")");
           } else {
-            showResult += ")";
+            showExpression += ")";
             openQuot--;
             saveBtn(")");
           }
         } else if (openQuot == 0 && getBtnType(lastBtn) == 'is_number') {
-          showResult += "×(";
+          showExpression += "×(";
           openQuot++;
           saveBtn("×");
           saveBtn("(");
         } else if (getBtnType(lastBtn) == 'is_number' && openQuot > 0) {
-          showResult += ")";
+          showExpression += ")";
           openQuot--;
           saveBtn(")");
         }
         if (lastBtn == ")" && openQuot == 0) {
-          showResult += "×(";
+          showExpression += "×(";
           openQuot++;
           saveBtn("×");
           saveBtn("(");
         } else if (lastBtn == ")" && openQuot > 0) {
-          showResult += ")";
+          showExpression += ")";
           openQuot--;
           saveBtn(")");
         }
         if (lastBtn == "(" && openQuot > 0 || lastBtn == '') {
-          showResult += "(";
+          showExpression += "(";
           openQuot++;
           saveBtn("(");
         }
         if (getBtnType(lastBtn) == 'is_operator') {
-          showResult += "(";
+          showExpression += "(";
           openQuot++;
           saveBtn("(");
         }
@@ -173,19 +177,19 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
         //==================================================== نقطه
         String lastNumber = getLastNumber();
         if (lastNumber == '') {
-          showResult += '0.';
+          showExpression += '0.';
           saveBtn("0");
           saveBtn(".");
         } else if (!(lastNumber.contains('.'))) {
-          showResult += '.';
+          showExpression += '.';
           saveBtn(".");
         }
       }
       else if (buttonText == PLUSMINUS_SIGN) {
         //==================================================== علامت مثبت منفی
         if (getLastNumber() == '') {
-          showResult += '(';
-          showResult += MINUS_SIGN;
+          showExpression += '(';
+          showExpression += MINUS_SIGN;
           saveBtn('(');
           saveBtn('_');
           openQuot++;
@@ -199,16 +203,16 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
         //==================================================== علامت مساوی
         if (openQuot > 0) {
           while (openQuot > 0) {
-            showResult += ')';
+            showExpression += ')';
             saveBtn(')');
             openQuot--;
           }
         }
-        Controller(showResult);
         hasResult = true;
-        showResult += EQUAL_SIGN;
+        showExpression += EQUAL_SIGN;
         saveBtn(EQUAL_SIGN);
-        saveBtn(result);
+        saveBtn(finalResult);
+        Controller(showExpression);
       }
     }
 
@@ -217,21 +221,21 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
 
   void removePointWithMultiplication() {
     removeLastBtn();
-    showResult = showResult.substring(0, showResult.length - 1);
-    showResult += MULTIPLICATION_SIGN;
+    showExpression = showExpression.substring(0, showExpression.length - 1);
+    showExpression += MULTIPLICATION_SIGN;
     saveBtn(MULTIPLICATION_SIGN);
   }
 
   void removeLastPoint() {
     removeLastBtn();
-    showResult = showResult.substring(0, showResult.length - 1);
+    showExpression = showExpression.substring(0, showExpression.length - 1);
   }
 
   void makeNumberNegative() {
     String lastNumber = getLastNumber();
     int lastNumberLength = lastNumber.length;
-    showResult = showResult.substring(0, showResult.length - lastNumberLength);
-    showResult = '$showResult(-$lastNumber';
+    showExpression = showExpression.substring(0, showExpression.length - lastNumberLength);
+    showExpression = '$showExpression(-$lastNumber';
     allBtn.insert(allBtn.length - lastNumberLength, "(");
     allBtn.insert(allBtn.length - lastNumberLength, "_");
     openQuot++;
@@ -239,10 +243,9 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
 
   void makeNumberPositive() {
     int lastNumberLength = getLastNumber().length;
-    showResult =
-        showResult.substring(0, showResult.length - (lastNumberLength + 1));
+    showExpression = showExpression.substring(0, showExpression.length - (lastNumberLength + 1));
     String positiveNum = getLastNumber().replaceAll('_', '');
-    showResult += positiveNum;
+    showExpression += positiveNum;
     List reverseAllBtn = allBtn.reversed.toList();
     reverseAllBtn.removeAt(lastNumberLength - 1);
     reverseAllBtn.removeAt(lastNumberLength - 1);
@@ -313,8 +316,8 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
   }
 
   void clearAll() {
-    showResult = '';
-    result = '';
+    showExpression = '';
+    finalResult = '';
     openQuot = 0;
     allBtn = [];
   }
@@ -366,13 +369,22 @@ class CalculatorState extends State<Calculator> implements ViewInterface{
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    showResult,
+                    showExpression,
                     style: const TextStyle(color: Colors.blueAccent, fontSize: 17),
                   ),
                   Text(
-                    result,
+                    finalResult,
                     style: const TextStyle(color: Colors.greenAccent, fontSize: 23),
-                  ),
+                  )
+                  // StreamBuilder(
+                  //   stream: stream,
+                  //   builder: (BuildContext ctx ,AsyncSnapshot<double> snapShot ){
+                  //     return Text(
+                  //       snapShot.data.toString(),
+                  //       style: const TextStyle(color: Colors.greenAccent, fontSize: 23),
+                  //     );
+                  //   }
+                  // ),
                 ],
               ),
             ),
